@@ -1,3 +1,14 @@
+# IDE
+.idea/
+
+#OWN Executables
+sub
+*_test
+
+#Make output
+cmake-build-debug/
+*.d
+
 # Object files
 *.o
 *.ko
