@@ -10,17 +10,13 @@
 
 /******************************************************/
 
-/* This test the hello_world() function */
-void test__hello_world(void)
-{
-	hello_world();
-}
+
 
 /**
  * Main entry for the test.
  */
 int main(int argc, char **argv)
 {
-	test__hello_world();
+
 	return 0;
 }
