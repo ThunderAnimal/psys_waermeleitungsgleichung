@@ -8,6 +8,10 @@
 
 #include "core.h"
 
+
+
+/* ######## HELPER ######## */
+
 /**
  * Rezise Rastersize for Center HEat Point
  * @param rasterSize
@@ -40,10 +44,10 @@ void setUpRaster(float startTemperature,
                     unsigned int rasterSize,
                     unsigned int startPointX,
                     unsigned int startPointY,
-                 float raster[rasterSize][rasterSize]){
+                 float** raster){
 
-    for (int i = 0; i < rasterSize ; ++i) {
-        for (int k = 0; k < rasterSize ; ++k) {
+    for (int i = 0; i < rasterSize ; i++) {
+        for (int k = 0; k < rasterSize ; k++) {
             raster[i][k] = cornerTemperature;
         }
     }
@@ -57,10 +61,10 @@ void setUpRaster(float startTemperature,
  * @param newHeatMap
  */
 void setNewRaster(unsigned int rasterSize,
-                  float heatMap [rasterSize][rasterSize],
-                  float newHeatMap[rasterSize][rasterSize]){
-    for (int x = 0; x < rasterSize ; ++x) {
-        for (int y = 0; y < rasterSize ; ++y) {
+                  float **heatMap,
+                  float **newHeatMap){
+    for (int x = 0; x < rasterSize ; x++) {
+        for (int y = 0; y < rasterSize ; y++) {
             heatMap[x][y] = newHeatMap[x][y];
         }
     }
@@ -72,13 +76,59 @@ void setNewRaster(unsigned int rasterSize,
  * @return 0-false 1-true
  */
 int valideWaermeLeitfaehigkeit(float waermeleitfaehigkeit){
-    if(waermeleitfaehigkeit > 0 && waermeleitfaehigkeit < 1){
+    if(waermeleitfaehigkeit >= 0 && waermeleitfaehigkeit <= 1){
         return 1;
     }
     else{
         return 0;
     }
 }
+
+/**
+ * Calc Next Step of Heat Map
+ * @param startTemperatur
+ * @param rasterSize
+ * @param heatMap
+ * @param newHeatMap
+ * @return max diff Temperatur
+ */
+float calcNextHeatMap(unsigned int startpointX,
+                     unsigned int startPointY,
+                     unsigned int rasterSize,
+                     float waermeleitfaehigkeit,
+                     float **heatMap,
+                      float **newHeatMap){
+
+    float maxDiffTemperatur = 0.0;
+
+    for (int y = 0; y < rasterSize ; y++) {
+        for (int x = 0; x < rasterSize ; x++) {
+            if(x == 0  || y == 0 || x == rasterSize -1 || y == rasterSize - 1){ //wenn an Corner dann Corner Temperatur setzten
+                newHeatMap[x][y] = heatMap[0][0];
+            }else if( x == startpointX && y == startPointY){ //startpunkt dann übernehmen
+                newHeatMap[x][y] = heatMap[startpointX][startPointY];
+            }else{ //sonst berechnung der neuen Temperatur an dieser Stelle
+                float oldTemperature = heatMap[x][y];
+                float newTemperature = oldTemperature + waermeleitfaehigkeit/2 * (heatMap[x + 1][y] + heatMap[x - 1][y] - (2 * oldTemperature)) + waermeleitfaehigkeit/2*(heatMap[x][y + 1] + heatMap[x][y - 1] - (2 * oldTemperature));
+
+                if (newTemperature > oldTemperature){ //FIX Problem damit diagonalen immer erst im 2. Schritt berechnet werden und somit negative Werte endstehen koennen
+                    if(newTemperature - oldTemperature > maxDiffTemperatur){
+                        maxDiffTemperatur = newTemperature - oldTemperature;
+                    }
+                    newHeatMap[x][y] = newTemperature;
+                }else{
+                    newHeatMap[x][y] = oldTemperature;
+                }
+            }
+        }
+    }
+
+    return maxDiffTemperatur;
+}
+/* ############################################################################## */
+
+
+/* ######## OUTPUT FUNCTIONS FOR UI ######## */
 
 /**
  * Output Start Parameter
@@ -106,6 +156,10 @@ void outputStartParameter(float startTemperature,
     printf("Waermeleitfaehigkeit: %f\n", waermeleitfaehigkeit);
 }
 
+/**
+ * Output Steps
+ * @param steps
+ */
 void outputSteps(int steps){
     printf("Step: %d\n", steps);
 }
@@ -115,7 +169,7 @@ void outputSteps(int steps){
  * @param rasterSize
  * @param raster
  */
-void outputHeatMap(int rasterSize, float raster[rasterSize][rasterSize]){
+void outputHeatMap(int rasterSize, float **raster){
     for (int y = 0; y < rasterSize ; y++) {
         for (int x = 0; x < rasterSize ;x++) {
             printf("%f\t", raster[x][y]);
@@ -126,49 +180,10 @@ void outputHeatMap(int rasterSize, float raster[rasterSize][rasterSize]){
         }
     }
 }
+/* ############################################################################## */
 
-/**
- * Calc Next Step of Heat Map
- * @param startTemperatur
- * @param rasterSize
- * @param heatMap
- * @param newHeatMap
- * @return max diff Temperatur
- */
-float calcNextHeatMap(unsigned int startpointX,
-                     unsigned int startPointY,
-                     unsigned int rasterSize,
-                     float waermeleitfaehigkeit,
-                     float heatMap [rasterSize][rasterSize],
-                      float newHeatMap [rasterSize][rasterSize]){
 
-    float maxDiffTemperatur = 0.0;
-
-    for (int y = 0; y < rasterSize ; ++y) {
-        for (int x = 0; x < rasterSize ; ++x) {
-            if(x == 0  || y == 0 || x == rasterSize -1 || y == rasterSize - 1){ //wenn an Corner dann Corner Temperatur setzten
-                newHeatMap[x][y] = heatMap[0][0];
-            }else if( x == startpointX && y == startPointY){ //startpunkt dann übernehmen
-                newHeatMap[x][y] = heatMap[startpointX][startPointY];
-            }else{ //sonst berechnung der neuen Temperatur an dieser Stelle
-                float oldTemperature = heatMap[x][y];
-                float newTemperature = oldTemperature + waermeleitfaehigkeit/2 * (heatMap[x + 1][y] + heatMap[x - 1][y] - (2 * oldTemperature)) + waermeleitfaehigkeit/2*(heatMap[x][y + 1] + heatMap[x][y - 1] - (2 * oldTemperature));
-
-                if (newTemperature > oldTemperature){
-                    if(newTemperature - oldTemperature > maxDiffTemperatur){
-                        maxDiffTemperatur = newTemperature - oldTemperature;
-                    }
-                    newHeatMap[x][y] = newTemperature;
-                }else{
-                    newHeatMap[x][y] = oldTemperature;
-                }
-            }
-        }
-    }
-
-    return maxDiffTemperatur;
-}
-
+/* ######## EXEC Functions CALL FROM OUTSIDE ######## */
 /**
  * exce the head conduction
  *
@@ -187,16 +202,21 @@ int exec_head_conduction(float startTemperature,
                          unsigned int rasterSize,
                          unsigned int startPointX,
                          unsigned int startPointY,
-                         float waermeleitfaehigkeit){
+                         float waermeleitfaehigkeit,
+                         int debug){
 
     int steps = 0;
     float diffTemperature;
-    float heatMap[rasterSize][rasterSize];
 
+    //Alocate Array
+    float** heatMap = malloc(sizeof(float*) * rasterSize);
+    for(int i = 0; i < rasterSize; i++){
+        heatMap[i] = malloc(rasterSize * sizeof(float));
+    }
 
     //Check Parameter
     if (valideWaermeLeitfaehigkeit(waermeleitfaehigkeit) != 1){
-        fprintf(stderr, "Ungueltige Eingabe: Waermeleifaehigkeit, muss zwischen 0-1 liegen");
+        fprintf(stderr, "Ungueltige Eingabe: Waermeleifaehigkeit muss zwischen 0-1 liegen\n");
         return EXIT_FAILURE;
     }
 
@@ -205,28 +225,39 @@ int exec_head_conduction(float startTemperature,
 
     //Output Start
     outputStartParameter(startTemperature, cornerTemperatur, diffEndTemperatur, rasterSize, startPointX, startPointY, waermeleitfaehigkeit);
-    outputHeatMap(rasterSize, heatMap);
+    if(debug == 1){
+        outputHeatMap(rasterSize, heatMap);
+    }
 
     //Verarbeitung
     do{
-        float newHeatMap[rasterSize][rasterSize];
+        //Alocate new Array
+        float** newHeatMap = malloc(sizeof(float*) * rasterSize);
+        for(int i = 0; i < rasterSize; i++){
+            newHeatMap[i] = malloc(rasterSize * sizeof(float));
+        }
 
         diffTemperature = calcNextHeatMap(startPointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap);
         steps = steps + 1;
 
         //Copy Heat Map
         setNewRaster(rasterSize,heatMap,newHeatMap);
+        free(newHeatMap);
 
-        outputSteps(steps);
-        outputHeatMap(rasterSize, heatMap);
+        if(debug == 1){
+            outputSteps(steps);
+            outputHeatMap(rasterSize, heatMap);
+        }
     }while(diffEndTemperatur < diffTemperature);
 
+    free(heatMap);
     return steps;
 }
 
 /**
  * exce simple head conduction
  *  - with center start heat Point
+ *  - start Temperature is 100
  *  - corner Temperatur is 0
  *
  * @param startTemperature
@@ -235,14 +266,16 @@ int exec_head_conduction(float startTemperature,
  * @param waermeleitfaehigkeit
  * @return count Steps
 */
-int head_conduction_simple(float startTemperature,
-                           float diffEndTemperatur,
+int head_conduction_simple(float diffEndTemperatur,
                            unsigned int rasterSize,
-                           float waermeleitfaehigkeit){
+                           float waermeleitfaehigkeit,
+                           int debug){
 
     rasterSize = reziseRasterForCenter(rasterSize);
-    return exec_head_conduction(startTemperature, 0, diffEndTemperatur, rasterSize, rasterSize/2, rasterSize/2, waermeleitfaehigkeit);
+    return exec_head_conduction(100, 0, diffEndTemperatur, rasterSize, rasterSize/2, rasterSize/2, waermeleitfaehigkeit, debug);
 }
+/* ############################################################################## */
+
 
 
 
