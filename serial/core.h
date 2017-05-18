@@ -10,17 +10,19 @@ int exec_head_conduction(float startTemperature,
                          unsigned int rasterSize,
                          unsigned int startPointX,
                          unsigned int startPointY,
-                         float waermeleitfaehigkeit);
+                         float waermeleitfaehigkeit,
+                         int debug);
 
 
 /**
  * exce simple head conduction
  *  - with center start heat Point
- *  - corner Temperatur is 0
+ *  - start Temperature is 100
+ *  - corner Temperature is 0
  */
-int head_conduction_simple(float startTemperature,
-                           float diffEndTemperatur,
+int head_conduction_simple(float diffEndTemperatur,
                            unsigned int rasterSize,
-                           float waermeleitfaehigkeit);
+                           float waermeleitfaehigkeit,
+                           int debug);
 
 #endif
