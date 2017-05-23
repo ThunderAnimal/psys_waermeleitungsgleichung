@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Heat Conduction</title>
+      <!--Import Google Icon Font-->
+      <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+      <!--Import materialize.css-->
+      <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+      <link type="text/css" rel="stylesheet" href="css/style.css"/>
+  </head>
+
+  <body>
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <a href="#" class="brand-logo center">Heat Contuction</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <h5 class="header">Parameters</h5>
+        <div class="row">
+            <div class="col s8">
+                <form action="#">
+                    <p class="range-field">
+                        <input type="range" id="test5" min="0" max="100" />
+                        <label for="test5">Diff. Temperatur</label>
+                    </p>
+                    <p class="range-field">
+                        <input type="range" id="test6" min="0" max="100" />
+                        <label for="test6">Wärmeleitfähigkeit</label>
+                    </p>
+                    <p class="range-field">
+                        <input type="range" id="test7" min="0" max="100" />
+                        <label for="test7">Raster</label>
+                    </p>
+                </form>
+            </div>
+            <form action="#" class="col s4">
+                <p>
+                    <input class="with-gap" name="group1" type="radio" id="test1" checked />
+                    <label for="test1">Serial</label>
+                </p>
+                <p> <input class="with-gap" name="group1" type="radio" id="test2" />
+                    <label for="test2">Parallel (OpenMP)</label>
+                </p>
+                <p>
+                    <input class="with-gap" name="group1" type="radio" id="test3"  />
+                    <label for="test3">Paralle (Other)</label>
+                </p>
+            </form>
+        </div>
+
+
+        <div class="center-align">
+            <a class="waves-effect waves-light btn"><i class="material-icons right">send</i>Start Verarbeitung</a>
+        </div>
+
+
+        <h5 class="header">Result</h5>
+        <div class="s12">
+
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="footer-copyright">
+            <div class="container grey-text text-darken-4">
+                2017 © Lukas Grünwald, Martin Weber
+                <span class="right">Node.js: <script>document.write(process.versions.node)</script>,
+                Chromium: <script>document.write(process.versions.chrome)</script>,
+                Electron: <script>document.write(process.versions.electron)</script></span>
+
+            </div>
+        </div>
+    </footer>
+
+  </body>
+  <script>
+    // You can also require other files to run in this process
+    require('./js/renderer.js');
+  </script>
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+</html>

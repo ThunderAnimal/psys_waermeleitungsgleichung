@@ -1,0 +1,16 @@
+{
+  "name": "head_conduction",
+  "version": "1.0.0",
+  "description": "A minimal Head Conduction application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "head conduction"
+  ],
+  "author": "Martin Weber",
+  "devDependencies": {
+    "electron": "~1.6.2"
+  }
+}
