@@ -3,11 +3,10 @@
     <head>
       <meta charset="UTF-8">
       <title>Heat Conduction</title>
-      <!--Import Google Icon Font-->
-      <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
-      <!--Import materialize.css-->
-      <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
-      <link type="text/css" rel="stylesheet" href="css/style.css"/>
+      <link type="text/css" rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css"  media="screen,projection"/>
+
+        <!-- OWN Style  -->
+        <link type="text/css" rel="stylesheet" href="css/style.css"/>
   </head>
 
   <body>
@@ -20,9 +19,8 @@
     </header>
 
     <main>
-        <h5 class="header">Parameters</h5>
         <div class="row">
-            <div class="col s8">
+            <div class="col s7">
                 <form action="#">
                     <p class="range-field">
                         <input type="range" id="test5" min="0" max="100" />
@@ -38,28 +36,27 @@
                     </p>
                 </form>
             </div>
-            <form action="#" class="col s4">
+            <form action="#" class="col offset-s1 s4">
                 <p>
                     <input class="with-gap" name="group1" type="radio" id="test1" checked />
                     <label for="test1">Serial</label>
                 </p>
                 <p> <input class="with-gap" name="group1" type="radio" id="test2" />
-                    <label for="test2">Parallel (OpenMP)</label>
+                    <label for="test2">Parallel - OpenMP</label>
                 </p>
                 <p>
                     <input class="with-gap" name="group1" type="radio" id="test3"  />
-                    <label for="test3">Paralle (Other)</label>
+                    <label for="test3">Parallel - OpenCL</label>
                 </p>
             </form>
         </div>
 
 
         <div class="center-align">
-            <a class="waves-effect waves-light btn"><i class="material-icons right">send</i>Start Verarbeitung</a>
+            <a id="btnStart" class="waves-effect waves-light btn"><i class="material-icons right">send</i>Start Verarbeitung</a>
         </div>
 
 
-        <h5 class="header">Result</h5>
         <div class="s12">
 
         </div>
@@ -82,7 +79,10 @@
     // You can also require other files to run in this process
     require('./js/renderer.js');
   </script>
-    <!--Import jQuery before materialize.js-->
-    <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
-    <script type="text/javascript" src="js/materialize.min.js"></script>
+
+    <script type="text/javascript" src="../node_modules/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="../node_modules/hammerjs/hammer.min.js"></script>
+    <script type="text/javascript" src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
+    <script type="text/javascript" src="./js/index.js"></script>
+
 </html>

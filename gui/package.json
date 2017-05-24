@@ -12,5 +12,8 @@
   "author": "Martin Weber",
   "devDependencies": {
     "electron": "~1.6.2"
+  },
+  "dependencies": {
+    "materialize-css": "^0.98.2"
   }
 }
