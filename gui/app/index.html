@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
-      <meta charset="UTF-8">
-      <title>Heat Conduction</title>
-      <link type="text/css" rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css"  media="screen,projection"/>
+        <meta charset="UTF-8">
+        <title>Heat Conduction</title>
+        <link type="text/css" rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css"  media="screen,projection"/>
+        <link type="text/css" rel="stylesheet" href="../node_modules/materialize-css/extras/noUiSlider/nouislider.css"/>
 
         <!-- OWN Style  -->
         <link type="text/css" rel="stylesheet" href="css/style.css"/>
@@ -19,53 +20,84 @@
     </header>
 
     <main>
-        <div class="row">
-            <div class="col s7">
-                <form action="#">
-                    <p class="range-field">
-                        <input type="range" id="test5" min="0" max="100" />
-                        <label for="test5">Diff. Temperatur</label>
+        <div id="inputParameters">
+            <div class="row valign-wrapper">
+                <div class="col s7">
+                    <div class="valign-wrapper">
+                        <div class="input-field col s3 tooltipped" data-position="bottom" data-delay="300" data-tooltip="Wärmeusgleichung konvergiert um die angegeben Temperatur">
+                            <input id="inputDifftemerature" type="text">
+                            <label for="inputDifftemerature">Diff. Temperatur</label>
+                        </div>
+                        <div class=" col s9">
+                            <div id="rangeDiffTemperature"></div>
+                        </div>
+                    </div>
+                    <div class=" valign-wrapper">
+                        <div class="input-field col s3 tooltipped" data-position="bottom" data-delay="300" data-tooltip="Prozentangabe wie gut die Wärme an die Umgebung abgegeben wird">
+                            <input id="inputWaermeleitfaehigkeit" type="text">
+                            <label for="inputWaermeleitfaehigkeit">Wärmeleitfähigkeit</label>
+                        </div>
+                        <div class=" col s9">
+                            <div id="rangeWaermeleitfaehigkeit"></div>
+                        </div>
+                    </div>
+                    <div class=" valign-wrapper">
+                        <div class="input-field col s3 tooltipped" data-position="bottom" data-delay="300" data-tooltip="Größe des Rasters">
+                            <input id="inputRasterSize" type="text">
+                            <label for="inputRasterSize">Raster</label>
+                        </div>
+                        <div class=" col s9">
+                            <div id="rangeRasterSize"></div>
+                        </div>
+                    </div>
+                </div>
+                <form action="#" class="col offset-s1 s4">
+                    <p>
+                        <input class="with-gap" name="group1" type="radio" id="test1" checked />
+                        <label for="test1">Serial</label>
                     </p>
-                    <p class="range-field">
-                        <input type="range" id="test6" min="0" max="100" />
-                        <label for="test6">Wärmeleitfähigkeit</label>
+                    <p> <input class="with-gap" name="group1" type="radio" id="test2" />
+                        <label for="test2">Parallel - OpenMP</label>
                     </p>
-                    <p class="range-field">
-                        <input type="range" id="test7" min="0" max="100" />
-                        <label for="test7">Raster</label>
+                    <p>
+                        <input class="with-gap" name="group1" type="radio" id="test3"  />
+                        <label for="test3">Parallel - OpenCL</label>
                     </p>
                 </form>
             </div>
-            <form action="#" class="col offset-s1 s4">
-                <p>
-                    <input class="with-gap" name="group1" type="radio" id="test1" checked />
-                    <label for="test1">Serial</label>
-                </p>
-                <p> <input class="with-gap" name="group1" type="radio" id="test2" />
-                    <label for="test2">Parallel - OpenMP</label>
-                </p>
-                <p>
-                    <input class="with-gap" name="group1" type="radio" id="test3"  />
-                    <label for="test3">Parallel - OpenCL</label>
-                </p>
-            </form>
+
+            <div class="heatMap_small tooltipped" data-position="bottom" data-delay="300" data-tooltip="Position der Hitzequelle festlegen">
+            </div>
+
+
+            <div class="center-align">
+                <a id="btnStart" class="waves-effect waves-light btn"><i class="material-icons right">send</i>Starte Verarbeitung</a>
+            </div>
+        </div>
+        <div id="result" style="display: none">
+            <div class="heatMap">
+
+            </div>
+            <div id="loaderCalcProc" class="progress">
+                <div class="indeterminate"></div>
+            </div>
+            <div class="center-align">
+                <h5 class="header"> Schritt: <span id="currentStep"></span> </h5>
+                <h6 class="header"> Schritte Gesamt: <span id="countSteps"></span></h6>
+            </div>
+
+
+            <div class="center-align">
+                <a id="btnRestart" class="waves-effect waves-light btn"><i class="material-icons left">replay</i>Neue Verarbeitung</a>
+            </div>
         </div>
 
-
-        <div class="center-align">
-            <a id="btnStart" class="waves-effect waves-light btn"><i class="material-icons right">send</i>Start Verarbeitung</a>
-        </div>
-
-
-        <div class="s12">
-
-        </div>
     </main>
 
     <footer class="page-footer">
         <div class="footer-copyright">
             <div class="container grey-text text-darken-4">
-                2017 © Lukas Grünwald, Martin Weber
+                2017 © Martin Weber
                 <span class="right">Node.js: <script>document.write(process.versions.node)</script>,
                 Chromium: <script>document.write(process.versions.chrome)</script>,
                 Electron: <script>document.write(process.versions.electron)</script></span>
@@ -83,6 +115,7 @@
     <script type="text/javascript" src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script type="text/javascript" src="../node_modules/hammerjs/hammer.min.js"></script>
     <script type="text/javascript" src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
+    <script type="text/javascript" src="../node_modules/materialize-css/extras/noUiSlider/nouislider.min.js"></script>
     <script type="text/javascript" src="./js/index.js"></script>
 
 </html>

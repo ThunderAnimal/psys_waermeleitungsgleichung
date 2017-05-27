@@ -57,3 +57,23 @@ nav {
 .page-footer {
   padding-top: 0;
   background-color: #eeeeee; }
+
+.heatMap_small{
+  height: 250px;
+  width: 100%;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 2px;
+  margin-bottom: 20px;
+}
+.heatMapContainer{
+  float: left;
+  border: 1px solid rgba(0,0,0,0.1);
+
+}
+
+.heatMap_small .heatMapContainer.active{
+  background-color: #26a69a;
+}
+.heatMap_small .heatMapContainer:hover{
+  background-color: #26a69a;
+}
