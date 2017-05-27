@@ -179,6 +179,17 @@ void outputHeatMap(int rasterSize, float **raster){
             }
         }
     }
+
+}
+
+void outputHeadMapGui(int rasterSize, float **raster){
+    for (int y = 0; y < rasterSize ; y++) {
+        for (int x = 0; x < rasterSize ;x++) {
+            printf("%f,", raster[x][y]);
+        }
+    }
+    printf("#,");
+    fflush(stdout);
 }
 /* ############################################################################## */
 
@@ -203,7 +214,7 @@ int exec_head_conduction(float startTemperature,
                          unsigned int startPointX,
                          unsigned int startPointY,
                          float waermeleitfaehigkeit,
-                         int debug){
+                         int modus){
 
     int steps = 0;
     float diffTemperature;
@@ -224,8 +235,10 @@ int exec_head_conduction(float startTemperature,
     setUpRaster(startTemperature, cornerTemperatur, rasterSize, startPointX, startPointY, heatMap);
 
     //Output Start
-    outputStartParameter(startTemperature, cornerTemperatur, diffEndTemperatur, rasterSize, startPointX, startPointY, waermeleitfaehigkeit);
-    if(debug == 1){
+    if(modus != 2){
+        outputStartParameter(startTemperature, cornerTemperatur, diffEndTemperatur, rasterSize, startPointX, startPointY, waermeleitfaehigkeit);
+    }
+    if(modus == 1){
         outputHeatMap(rasterSize, heatMap);
     }
 
@@ -244,9 +257,11 @@ int exec_head_conduction(float startTemperature,
         setNewRaster(rasterSize,heatMap,newHeatMap);
         free(newHeatMap);
 
-        if(debug == 1){
+        if(modus == 1){
             outputSteps(steps);
             outputHeatMap(rasterSize, heatMap);
+        }else if(modus == 2){
+            outputHeadMapGui(rasterSize, heatMap);
         }
     }while(diffEndTemperatur < diffTemperature);
 
@@ -269,10 +284,10 @@ int exec_head_conduction(float startTemperature,
 int head_conduction_simple(float diffEndTemperatur,
                            unsigned int rasterSize,
                            float waermeleitfaehigkeit,
-                           int debug){
+                           int modus){
 
     rasterSize = reziseRasterForCenter(rasterSize);
-    return exec_head_conduction(100, 0, diffEndTemperatur, rasterSize, rasterSize/2, rasterSize/2, waermeleitfaehigkeit, debug);
+    return exec_head_conduction(100, 0, diffEndTemperatur, rasterSize, rasterSize/2, rasterSize/2, waermeleitfaehigkeit, modus);
 }
 /* ############################################################################## */
 

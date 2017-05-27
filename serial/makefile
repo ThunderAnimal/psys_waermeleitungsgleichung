@@ -12,7 +12,7 @@
 #
 
 # The name of the main executable
-TARGET=head_conduction
+TARGET=heat_conduction
 
 # Flags and stuff, change as required
 OPTIMIZE=-O3

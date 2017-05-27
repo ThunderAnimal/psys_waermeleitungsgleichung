@@ -7,6 +7,6 @@ set(SOURCE_FILES
         core.c
         core.h
         core_test.c
-        head_conduction.c)
+        heat_conduction.c)
 
 add_executable(serial ${SOURCE_FILES})
