@@ -11,7 +11,7 @@ int exec_head_conduction(float startTemperature,
                          unsigned int startPointX,
                          unsigned int startPointY,
                          float waermeleitfaehigkeit,
-                         int debug);
+                         int modus);
 
 
 /**
@@ -23,6 +23,6 @@ int exec_head_conduction(float startTemperature,
 int head_conduction_simple(float diffEndTemperatur,
                            unsigned int rasterSize,
                            float waermeleitfaehigkeit,
-                           int debug);
+                           int modus);
 
 #endif
