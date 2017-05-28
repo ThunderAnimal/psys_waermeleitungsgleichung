@@ -206,6 +206,7 @@ function setUpHeatMap(rasterSize, container){
 function drawHeatMap(heatMap, item_pos){
     $("#currentStep").text(item_pos + 1);
 
+    //Cala Color from value [1,0]
     function heatMapColorforValue(value){
         const h = (1.0 - value) * 240;
         return "hsl(" + h + ", 100%, 50%)";

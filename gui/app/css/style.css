@@ -68,6 +68,9 @@ nav {
 .heatMap{
   height: 450px;
 }
+.heatMap_legend{
+  height: 400px;
+}
 .heatMap_small{
   height: 250px;
 }
