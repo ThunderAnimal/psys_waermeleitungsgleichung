@@ -53,14 +53,14 @@
                 </div>
                 <form action="#" class="col offset-s1 s4">
                     <p>
-                        <input class="with-gap" name="group1" type="radio" id="test1" checked />
+                        <input class="with-gap" name="group1" type="radio" id="test1" value="serial" checked />
                         <label for="test1">Serial</label>
                     </p>
-                    <p> <input class="with-gap" name="group1" type="radio" id="test2" />
+                    <p> <input class="with-gap" name="group1" type="radio" id="test2" value="openmp" />
                         <label for="test2">Parallel - OpenMP</label>
                     </p>
                     <p>
-                        <input class="with-gap" name="group1" type="radio" id="test3"  />
+                        <input class="with-gap" name="group1" type="radio" id="test3" value="opencl" />
                         <label for="test3">Parallel - OpenCL</label>
                     </p>
                 </form>
@@ -75,11 +75,10 @@
             </div>
         </div>
         <div id="result" style="display: none">
-            <div class="heatMap">
-
-            </div>
             <div id="loaderCalcProc" class="progress">
                 <div class="indeterminate"></div>
+            </div>
+            <div class="heatMap">
             </div>
             <div class="center-align">
                 <h5 class="header"> Schritt: <span id="currentStep"></span> </h5>

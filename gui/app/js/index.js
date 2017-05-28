@@ -90,7 +90,6 @@ $( document ).ready(function() {
     });
 
     $("body").on('click', '.heatMap_small .heatMapContainer', function () {
-        console.log('onclick');
         const container = $(this);
         $(".heatMap_small .heatMapContainer").each(function(){
             if($(this) != container){
@@ -98,10 +97,19 @@ $( document ).ready(function() {
             }
         });
         container.addClass("active");
+    }).on('click', '.heatMap .heatMapContainer', function () {
+        const container = $(this);
+        Materialize.toast('Temperatur: ' + container.data('temperature') + ' °C', 2000);
     });
 
 
 });
+
+function HeatPoint(PointX, PointY, temperature){
+    this.PointX = PointX;
+    this.PointY = PointY;
+    this.temperature = temperature;
+}
 
 function QueueHeatMap() {
     const that = this;
@@ -111,7 +119,17 @@ function QueueHeatMap() {
     let isFinish = false;
 
     this.addHeatMap = function (heatMap) {
-        queue.push(heatMap);
+        const heatMapPoints = [];
+        const rasterSize = Math.sqrt(heatMap.length);
+        for(let i = 0; i < heatMap.length; i++){
+            const y = parseInt((i/rasterSize),10);
+            let x = ((i+1) % rasterSize) - 1;
+            if(x == -1){
+                x = rasterSize - 1
+            }
+            heatMapPoints.push(new HeatPoint(x,y,heatMap[i]));
+        }
+        queue.push(heatMapPoints);
     };
 
     this.startCalculation = function(){
@@ -174,13 +192,12 @@ function QueueHeatMap() {
 }
 
 function setUpHeatMap(rasterSize, container){
-    const items = rasterSize * rasterSize;
     const size = 100 / rasterSize + "%";
 
     container.empty();
     for(let y = 0; y < rasterSize; y++){
         for(let x = 0; x < rasterSize; x++){
-            container.append(' <div class="heatMapContainer waves-effect waves-teal" data-x="' + x + '" data-y="' + y + '" data-temperature="" style="height:' + size + ' ;width: ' + size + ';"></div>')
+            container.append(' <div id="containerX' + x + 'Y' + y + '" class="heatMapContainer waves-effect waves-teal" data-x="' + x + '" data-y="' + y + '" data-temperature="" style="height:' + size + ' ;width: ' + size + ';"></div>')
         }
         container.append('<div class="clearfix"></div>');
     }
@@ -188,71 +205,138 @@ function setUpHeatMap(rasterSize, container){
 
 function drawHeatMap(heatMap, item_pos){
     $("#currentStep").text(item_pos + 1);
+
+    function heatMapColorforValue(value){
+        const h = (1.0 - value) * 240;
+        return "hsl(" + h + ", 100%, 50%)";
+    }
+    for(let i = 0; i < heatMap.length; i++){
+        const x = heatMap[i].PointX;
+        const y = heatMap[i].PointY;
+
+        const container = $(".heatMap #containerX" + x + "Y" + y);
+        container.attr("data-temperature", heatMap[i].temperature.toString());
+        container.css('background-color', heatMapColorforValue(heatMap[i].temperature/100));
+
+    }
 }
 
 function startCalculation(){
-    //SetUp UI
-    Materialize.toast('Starte Verabeitung', 1500);
-    $("#inputParameters").hide();
-    $("#loaderCalcProc").show();
-    $("#countSteps").text("Berechne...");
-    $("#btnRestart").addClass("disabled");
-    $("#result").show();
-
-    const spawn = require('child_process').spawn;
-    const exec = spawn('../serial/heat_conduction', ['0.001', '51', '0.10', '2']);
+    //Queue
     const queueHeatMap = new QueueHeatMap();
 
-    let heatMap = [];
-    let isEnd = false;
-    let steps = 0;
-    let tempValue = ""; //Daten die buffer abgeschitten sind
+    const func_getParameters = function () {
+        const startTemperature = 100;
+        const cornerTemperature = 0;
+        const modus = 2; //GUI Modus
+        const rasterSize = parseInt( document.getElementById('rangeRasterSize').noUiSlider.get(), 10);
+        const diffEndTemperatre =  document.getElementById('rangeDiffTemperature').noUiSlider.get();
+        const waermeleitfaehigkeit =  document.getElementById('rangeWaermeleitfaehigkeit').noUiSlider.get();
 
-    queueHeatMap.startCalculation();
+        let startPointX = 0;
+        let startPointY = 0;
 
-    exec.stdout.on('data', (data) => {
-        const array = data.toString().split(',');
-        for(let i = 0; i < array.length; i++){
-            if(isEnd){ //Am End edie Anzahl der Steps speichern
-                steps = array[i];
-                return;
-            }
-            if(array[i] == "#"){ //Ende der HeatMap
-                queueHeatMap.addHeatMap(heatMap);
-                heatMap = [];
-            }else if (array[i] == '##'){//Ende der Verarbeitung
-                isEnd = true;
-            }else{
-                let val = array[i];
-                if(i == array.length - 1){ //Wenn letztes Item dann abschnittenen wert merken
-                    tempValue = array[i];
+        let found = false;
+        $(".heatMap_small .heatMapContainer.active").each(function(){
+            found = true;
+            startPointX = $(this).data("x");
+            startPointY = $(this).data("y");
+        });
+        if(!found){
+            return false;
+        }
+
+        return [diffEndTemperatre, rasterSize, waermeleitfaehigkeit, startTemperature, cornerTemperature, startPointX, startPointY, modus];
+    };
+
+    const func_getExecPath = function(){
+        const val = $('input[name="group1"]:checked').val();
+        return '../' + val + '/heat_conduction';
+    };
+
+    const func_setUpUIStart = function(rasterSize){
+        //SetUp UI
+        Materialize.toast('Starte Verabeitung', 1500);
+        $("#inputParameters").hide();
+        $("#loaderCalcProc").show();
+        $("#countSteps").text("Berechne...");
+        $("#btnRestart").addClass("disabled");
+        $("#result").show();
+
+        setUpHeatMap(inputParameters[1], $(".heatMap"));
+
+    };
+
+    const func_execCalculation = function(execPath ,startUpParameters){
+        const spawn = require('child_process').spawn;
+        const exec = spawn(execPath, startUpParameters);
+
+
+        let heatMap = [];
+        let isEnd = false;
+        let steps = 0;
+        let tempValue = ""; //Daten die buffer abgeschitten sind
+
+        queueHeatMap.startCalculation();
+
+        exec.stdout.on('data', (data) => {
+            const array = data.toString().split(',');
+            for(let i = 0; i < array.length; i++){
+                if(isEnd){ //Am End edie Anzahl der Steps speichern
+                    steps = array[i];
+                    return;
+                }
+                if(array[i] == "#"){ //Ende der HeatMap
+                    queueHeatMap.addHeatMap(heatMap);
+                    heatMap = [];
+                }else if (array[i] == '##'){//Ende der Verarbeitung
+                    isEnd = true;
                 }else{
-                    if(i == 0){ //Wenn erstes Item dann mit abschnitten Wert aus vorherigen Buffer zusammenfuegen
-                        val = tempValue + array[i]
-                    }
-                    else{
-                        val = array[i];
-                    }
-                    if(array[i] != ""){
-                        heatMap.push(val)
+                    let val = array[i];
+                    if(i == array.length - 1){ //Wenn letztes Item dann abschnittenen wert merken
+                        tempValue = array[i];
+                    }else{
+                        if(i == 0){ //Wenn erstes Item dann mit abschnitten Wert aus vorherigen Buffer zusammenfuegen
+                            val = tempValue + array[i]
+                        }
+                        else{
+                            val = array[i];
+                        }
+                        if(array[i] != ""){
+                            heatMap.push(val)
+                        }
                     }
                 }
             }
-        }
-    });
+        });
 
-    exec.stderr.on('data', (data) => {
-        console.log(`stderr: ${data}`);
+        exec.stderr.on('data', (data) => {
+            console.log(`stderr: ${data}`);
 
-    });
+        });
 
-    exec.on('close', (code) => {
-        console.log(`child process exited with code ${code}`);
-        queueHeatMap.setEndCalculation();
+        exec.on('close', (code) => {
+            console.log(`child process exited with code ${code}`);
+            queueHeatMap.setEndCalculation();
+            func_setUpUIEnd(steps);
+        });
+    };
+
+    const func_setUpUIEnd = function(steps){
         $("#countSteps").text(steps);
         $("#loaderCalcProc").hide();
         $("#btnRestart").removeClass("disabled");
-    });
+    };
+
+    const inputParameters = func_getParameters();
+    if(!inputParameters){
+        Materialize.toast('Wählen Sie einen Startpunkt aus!', 3000);
+        return;
+    }
+    func_setUpUIStart(inputParameters);
+    setTimeout(function(){
+       func_execCalculation(func_getExecPath(), inputParameters);
+    }, 500);
 }
 
 function resetCalculation() {
