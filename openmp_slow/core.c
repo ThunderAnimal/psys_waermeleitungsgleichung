@@ -129,6 +129,7 @@ float calcNextHeatMap(unsigned int startpointX,
 
                 if (newTemperature > oldTemperature){ //FIX Problem damit diagonalen immer erst im 2. Schritt berechnet werden und somit negative Werte endstehen koennen
                     if(newTemperature - oldTemperature > maxDiffTemperatur){
+                        #pragma omp critical
                         maxDiffTemperatur = newTemperature - oldTemperature;
                     }
                     newHeatMap[x][y] = newTemperature;
