@@ -116,7 +116,7 @@ float calcNextHeatMap(unsigned int startpointX,
 
     #pragma omp parallel shared (startpointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap, maxDiffTemperatur) private (x, y, newTemperature, oldTemperature)
     {
-	#pragma omp for
+	#pragma omp for //Reihenfolge ist entscheidend bei abarbeitung von two-dimensionel array --> is stored in rows, Array is accessed columnwise (bad memory access)
     	for (y = 0; y < rasterSize ; y++) {
         	for (x = 0; x < rasterSize ; x++) {
             	if(x == 0  || y == 0 || x == rasterSize -1 || y == rasterSize - 1){ //wenn an Corner dann Corner Temperatur setzten
@@ -127,7 +127,6 @@ float calcNextHeatMap(unsigned int startpointX,
                 	oldTemperature = heatMap[x][y];
                		newTemperature = oldTemperature + waermeleitfaehigkeit/2 * (heatMap[x + 1][y] + heatMap[x - 1][y] - (2 * oldTemperature)) + waermeleitfaehigkeit/2*(heatMap[x][y + 1] + heatMap[x][y - 1] - (2 * oldTemperature));
 
-		#pragma omp critical
                 if (newTemperature > oldTemperature){ //FIX Problem damit diagonalen immer erst im 2. Schritt berechnet werden und somit negative Werte endstehen koennen
                     if(newTemperature - oldTemperature > maxDiffTemperatur){
                         maxDiffTemperatur = newTemperature - oldTemperature;
