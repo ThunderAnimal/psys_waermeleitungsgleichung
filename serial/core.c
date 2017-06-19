@@ -101,8 +101,8 @@ float calcNextHeatMap(unsigned int startpointX,
 
     float maxDiffTemperatur = 0.0;
 
-    for (int y = 0; y < rasterSize ; y++) {
-        for (int x = 0; x < rasterSize ; x++) {
+    for (int x = 0; x < rasterSize ; x++) {
+        for (int y = 0; y < rasterSize ; y++) {
             if(x == 0  || y == 0 || x == rasterSize -1 || y == rasterSize - 1){ //wenn an Corner dann Corner Temperatur setzten
                 newHeatMap[x][y] = heatMap[0][0];
             }else if( x == startpointX && y == startPointY){ //startpunkt dann übernehmen
