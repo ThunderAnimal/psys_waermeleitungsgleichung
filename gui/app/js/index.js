@@ -1,6 +1,10 @@
 /**
  * Created by insanemac on 24/05/2017.
  */
+
+//Queue
+let queueHeatMap = {}
+
 $( document ).ready(function() {
     //Set UP Range UI
     let rangeDiffTemperature = document.getElementById('rangeDiffTemperature');
@@ -149,6 +153,11 @@ function QueueHeatMap() {
     const execQueue = function () {
 
         const helperExecQueue = function (item_pos) {
+            //Wenn durch neue Verarbeitung abgebrochen
+            if(!isRunnunig){
+                return;
+            }
+
             //Wenn Queue abgearbeitet und die Verarbeitung beendet ist dann Prcodeure verlassen
             if(isFinish && item_pos == queue.length - 1){
                 drawHeatMap(queue[item_pos], item_pos);
@@ -223,8 +232,8 @@ function drawHeatMap(heatMap, item_pos){
 }
 
 function startCalculation(){
-    //Queue
-    const queueHeatMap = new QueueHeatMap();
+    //init new Queue
+    queueHeatMap = new QueueHeatMap();
 
     const func_getParameters = function () {
         const startTemperature = 100;
@@ -269,6 +278,7 @@ function startCalculation(){
     };
 
     const func_execCalculation = function(execPath ,startUpParameters){
+        const startTime = Date.now();
         const spawn = require('child_process').spawn;
         const exec = spawn(execPath, startUpParameters);
 
@@ -317,13 +327,15 @@ function startCalculation(){
         });
 
         exec.on('close', (code) => {
+            const endTime = Date.now();
             console.log(`child process exited with code ${code}`);
             queueHeatMap.setEndCalculation();
-            func_setUpUIEnd(steps);
+            func_setUpUIEnd(steps, endTime - startTime);
         });
     };
 
-    const func_setUpUIEnd = function(steps){
+    const func_setUpUIEnd = function(steps, time){
+        $("#time").text(time/1000);
         $("#countSteps").text(steps);
         $("#loaderCalcProc").hide();
         $("#btnRestart").removeClass("disabled");
@@ -341,6 +353,7 @@ function startCalculation(){
 }
 
 function resetCalculation() {
+    queueHeatMap.finishQueue();
     $("#result").hide();
     $("#inputParameters").show();
 }

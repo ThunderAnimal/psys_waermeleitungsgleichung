@@ -56,12 +56,20 @@
                         <input class="with-gap" name="group1" type="radio" id="test1" value="serial" checked />
                         <label for="test1">Serial</label>
                     </p>
-                    <p> <input class="with-gap" name="group1" type="radio" id="test2" value="openmp" />
-                        <label for="test2">Parallel - OpenMP</label>
+                    <p> <input class="with-gap" name="group1" type="radio" id="test2" value="openmp_manually" />
+                        <label for="test2">Parallel - OpenMP manually</label>
                     </p>
                     <p>
-                        <input class="with-gap" name="group1" type="radio" id="test3" value="opencl" />
-                        <label for="test3">Parallel - OpenCL</label>
+                        <input class="with-gap" name="group1" type="radio" id="test3" value="openmp_slow" />
+                        <label for="test3">Parallel - OpenMP auto (slow)</label>
+                    </p>
+                    <p>
+                        <input class="with-gap" name="group1" type="radio" id="test4" value="openmp_fast" />
+                        <label for="test4">Parallel - OpenCM auto (fast)</label>
+                    </p>
+                    <p>
+                        <input class="with-gap" name="group1" type="radio" id="test5" value="opencl" />
+                        <label for="test5">Parallel - OpenCL</label>
                     </p>
                 </form>
             </div>
@@ -91,7 +99,7 @@
 
             <div class="center-align">
                 <h5 class="header"> Schritt: <span id="currentStep"></span> </h5>
-                <h6 class="header"> Schritte Gesamt: <span id="countSteps"></span></h6>
+                <h6 class="header"> Schritte Gesamt: <span id="countSteps" style="padding-right: 20px"></span> Benötigte Zeit: <span id="time"></span>s</h6>
             </div>
 
 
@@ -105,7 +113,7 @@
     <footer class="page-footer">
         <div class="footer-copyright">
             <div class="container grey-text text-darken-4">
-                2017 © Martin Weber
+                2017 © Lukas Grünewald, Martin Weber
                 <span class="right">Node.js: <script>document.write(process.versions.node)</script>,
                 Chromium: <script>document.write(process.versions.chrome)</script>,
                 Electron: <script>document.write(process.versions.electron)</script></span>
