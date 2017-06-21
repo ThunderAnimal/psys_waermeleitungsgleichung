@@ -60,6 +60,18 @@ static char *read_file_contents(const char *filename)
 /* ######## HELPER ######## */
 
 /**
+ * Calc Index in Array from x and y
+ * @param pointX
+ * @param pointY
+ * @param rasterSize
+ * @return
+ */
+unsigned int getIndexFromXY(unsigned int pointX, unsigned int pointY, unsigned int rasterSize){
+    return pointY * rasterSize + pointX;
+}
+
+
+/**
  * Rezise Rastersize for Center HEat Point
  * @param rasterSize
  * @return new rasterSize
@@ -81,7 +93,7 @@ unsigned int reziseRasterForCenter(unsigned int rasterSize){
  *
  * @param startTemperature
  * @param cornerTemperature
- * @param rasterSize
+ * @param sizeArray
  * @param startPointX
  * @param startPointY
  * @param raster
@@ -91,29 +103,91 @@ void setUpRaster(float startTemperature,
                     unsigned int rasterSize,
                     unsigned int startPointX,
                     unsigned int startPointY,
-                 float** raster){
+                 float* raster){
 
-    for (int i = 0; i < rasterSize ; i++) {
-        for (int k = 0; k < rasterSize ; k++) {
-            raster[i][k] = cornerTemperature;
-        }
+    for (int i = 0; i < rasterSize * rasterSize ; i++) {
+        raster[i] = cornerTemperature;
     }
-    raster[startPointX][startPointY] = startTemperature;
+    raster[getIndexFromXY(startPointX,startPointY,rasterSize)] = startTemperature;
 }
 
 /**
  * Set up the new Heat Map
- * @param rasterSize
+ * @param arraySize
  * @param heatMap
  * @param newHeatMap
  */
-void setNewRaster(unsigned int rasterSize,
-                  float **heatMap,
-                  float **newHeatMap){
-    for (int x = 0; x < rasterSize ; x++) {
-        for (int y = 0; y < rasterSize ; y++) {
-            heatMap[x][y] = newHeatMap[x][y];
-        }
+void setNewRaster(unsigned int arraySize,
+                  float *heatMap,
+                  float *newHeatMap,
+                    cl_program prog,
+                    cl_context context,
+                    cl_command_queue cq){
+
+    size_t worksteps = arraySize;
+    size_t memworksize =  arraySize * sizeof(float);
+
+    cl_int error;
+    cl_mem cl_srcmem, cl_destmem;
+
+    cl_kernel k_copy = clCreateKernel(prog, "copyArray", &error);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't create kernel!\n");
+        goto out;
+    }
+
+    cl_srcmem = clCreateBuffer(context, CL_MEM_READ_ONLY, memworksize, NULL, &error);
+    cl_destmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, memworksize, NULL, &error);
+    if (!cl_srcmem || !cl_destmem)
+    {
+        fprintf(stderr,"Couldn't create buffer!\n");
+        goto out;
+    }
+
+    error = clSetKernelArg(k_copy, 0, sizeof(cl_srcmem), &cl_srcmem);
+    error |= clSetKernelArg(k_copy, 1, sizeof(cl_destmem), &cl_destmem);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Failed to set kernel arguments!\n");
+        goto out;
+    }
+
+
+    error = clEnqueueWriteBuffer(cq, cl_srcmem, CL_FALSE, 0, memworksize, newHeatMap, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't transfer source to target mem!\n");
+        goto out;
+    }
+
+    error = clEnqueueNDRangeKernel(cq, k_copy, 1, NULL, &worksteps, NULL, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't enqueue the kernel!\n");
+        goto out;
+    }
+
+    error = clEnqueueReadBuffer(cq, cl_destmem, CL_FALSE, 0, memworksize, heatMap, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't read buffer back!\n");
+        goto out;
+    }
+
+    error = clFinish(cq);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Unable to finish calculation!\n");
+        goto out;
+    }
+    error = CL_SUCCESS;
+
+    out:
+    if (cl_srcmem) clReleaseMemObject(cl_srcmem);
+    if (cl_destmem) clReleaseMemObject(cl_destmem);
+    if (error != CL_SUCCESS){
+        fprintf(stderr,"Error number %d\n", error);
     }
 }
 
@@ -143,252 +217,75 @@ float calcNextHeatMap(unsigned int startpointX,
                      unsigned int startPointY,
                      unsigned int rasterSize,
                      float waermeleitfaehigkeit,
-                     float **heatMap,
-                      float **newHeatMap){
+                     float *heatMap,
+                      float *newHeatMap,
+                      float *diffTemperature,
+                    cl_program prog,
+                    cl_context context,
+                    cl_command_queue cq){
 
-    float maxDiffTemperatur = 0.0;
+    unsigned int startIndex = getIndexFromXY(startpointX, startPointY, rasterSize);
 
     /* Defines the number of work items*/
-    size_t worksteps = rasterSize * rasterSize;
+    size_t worksteps[2];
+    worksteps[0] = rasterSize;
+    worksteps[1] = rasterSize;
     size_t memworksize =  rasterSize * rasterSize * sizeof(float);
 
-    /* The error variable. We need it everywhere */
     cl_int error;
+    cl_mem cl_srcmem, cl_destmem, cl_destmem2;
 
-    /* Phase 1 variables */
-    cl_platform_id platform;
-    cl_device_id device;
-    cl_uint platforms, devices;
-    char name[128];
-
-    /* Phase 2 variables */
-    char *k_src = NULL; /* kernel source */
-    cl_context context = NULL;
-
-    /**** Phase 1: Find platform and device (will OpenCL work at all?) *****/
-
-    /* Fetch available platform; we only want the first one. */
-    error = clGetPlatformIDs(1, &platform, &platforms);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't get platform ids\n");
-        goto out;
-    }
-    printf("Number of available platforms = %d\n",platforms);
-
-    /* Get the name of the platform and print it */
-    error = clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(name), name, NULL);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't get platform name\n");
-        goto out;
-    }
-    printf("Platform = %s\n",name);
-
-    /* Now get the first device of our platform */
-    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, &devices);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't get device ids\n");
-        goto out;
-    }
-
-    /**** Phase 2: Create the context and all of its associates *****/
-    /* Create a CL context for the selected device, note that nVidia's OpenCL requires the platform property */
-    cl_context_properties properties[]=
-            {
-                    CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-                    0
-            };
-    context = clCreateContext(properties, 1, &device, NULL, NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create the context\n");
-        goto out;
-    }
-
-    /* Now create the command queue */
-    cl_command_queue cq = clCreateCommandQueue(context, device, 0, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create the command queue\n");
-        goto out;
-    }
-
-    /* Now read in the file with the kernel */
-    if (!(k_src = read_file_contents("kernel.cl")))
-    {
-        fprintf(stderr,"Couldn't read the contents of the kernel file!\n");
-        goto out;
-    }
-
-    /* Array of all sources, we only have one source file */
-    const char *srcptr[]={k_src};
-
-    /* Submit the just loaded source code to OpenCL. The resulting
-     * program/kernel is associated with the given context */
-    cl_program prog = clCreateProgramWithSource(context, 1, srcptr, NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create the kernel from source\n");
-        goto out;
-    }
-
-    /* Now compile */
-    error = clBuildProgram(prog, 0, NULL, "", NULL, NULL);
-    if (error != CL_SUCCESS )
-    {
-        char build_c[4096];
-
-        fprintf(stderr, "Error on buildProgram\n");
-        fprintf(stderr, "\nRequestingInfo\n");
-        clGetProgramBuildInfo( prog, device, CL_PROGRAM_BUILD_LOG, sizeof(build_c), build_c, NULL );
-        fprintf(stderr, "Build Log for %s_program:\n%s\n", "kernel", build_c );
-        goto out;
-    }
-
-    /* Allocate the input memory for the kernel. In the kernel, we only read from it,
-     * hence we declare it as read only. */
-    cl_mem cl_srcmem1, cl_srcmem2, cl_srcmem3, cl_srcmem4, cl_srcmem5, cl_destmem;
-    cl_srcmem1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(unsigned int), NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create read only buffer!\n");
-        goto out;
-    }
-    cl_srcmem2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(unsigned int), NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create read only buffer!\n");
-        goto out;
-    }
-    cl_srcmem3 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(unsigned int), NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create read only buffer!\n");
-        goto out;
-    }
-    cl_srcmem4 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float), NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create read only buffer!\n");
-        goto out;
-    }
-    cl_srcmem5 = clCreateBuffer(context, CL_MEM_READ_ONLY, memworksize, NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create read only buffer!\n");
-        goto out;
-    }
-
-    /* In the kernel, we actually copy the contents of the input buffer another buffer.
-     * Hence, we declare this buffer as write only.
-     */
-    cl_destmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, memworksize, NULL, &error);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't create write only buffer!\n");
-        goto out;
-    }
-
-    /* We now get access to a kernel handle */
-    cl_kernel k_example = clCreateKernel(prog, "calc", &error);
+    cl_kernel k_calc = clCreateKernel(prog, "calc", &error);
     if (error != CL_SUCCESS)
     {
         fprintf(stderr,"Couldn't create kernel!\n");
         goto out;
     }
-    /* We declare that the cl_srcmem1 is the first parameter */
-    error = clSetKernelArg(k_example, 0, sizeof(cl_srcmem1), &cl_srcmem1);
-    if (error != CL_SUCCESS)
+
+    cl_srcmem = clCreateBuffer(context, CL_MEM_READ_ONLY, memworksize, NULL, &error);
+    cl_destmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, memworksize, NULL, &error);
+    cl_destmem2 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, memworksize, NULL, &error);
+    if (!cl_srcmem || !cl_destmem || !cl_destmem2)
     {
-        fprintf(stderr,"Couldn't set first argument for kernel!\n");
+        fprintf(stderr,"Couldn't create buffer!\n");
         goto out;
     }
-    /* We declare that the cl_srcmem2 is the second parameter */
-    error = clSetKernelArg(k_example, 1, sizeof(cl_srcmem2), &cl_srcmem2);
+
+    error = clSetKernelArg(k_calc, 0, sizeof(cl_srcmem), &cl_srcmem);
+    error |= clSetKernelArg(k_calc, 1, sizeof(cl_destmem), &cl_destmem);
+    error |= clSetKernelArg(k_calc, 2, sizeof(cl_destmem2), &cl_destmem2);
+    error |= clSetKernelArg(k_calc, 3, sizeof(unsigned int), (void *)&rasterSize);
+    error |= clSetKernelArg(k_calc, 4, sizeof(unsigned int), (void *)&startIndex);
+    error |= clSetKernelArg(k_calc, 5, sizeof(float), (void *)&waermeleitfaehigkeit);
     if (error != CL_SUCCESS)
     {
-        fprintf(stderr,"Couldn't set second argument for kernel!\n");
+        fprintf(stderr,"Failed to set kernel arguments!\n");
         goto out;
     }
-    /* We declare that the cl_srcmem3 is the second parameter */
-    error = clSetKernelArg(k_example, 2, sizeof(cl_srcmem3), &cl_srcmem3);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't set third argument for kernel!\n");
-        goto out;
-    }
-    /* We declare that the cl_srcmem4 is the second parameter */
-    error = clSetKernelArg(k_example, 3, sizeof(cl_srcmem4), &cl_srcmem4);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't set fourth argument for kernel!\n");
-        goto out;
-    }
-    /* We declare that the cl_srcmem4 is the second parameter */
-    error = clSetKernelArg(k_example, 4, sizeof(cl_srcmem5), &cl_srcmem5);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't set fives argument for kernel!\n");
-        goto out;
-    }
-    /* And we declare that cl_destmem is the third parameter */
-    error = clSetKernelArg(k_example, 5, sizeof(cl_destmem), &cl_destmem);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't set sixed argument for kernel!\n");
-        goto out;
-    }
-    /**** Phase 3: Fill and run the command queue *****/
-    /* Send input data to OpenCL (async, don't alter the buffer!) */
-    error = clEnqueueWriteBuffer(cq, cl_srcmem1, CL_FALSE, 0, sizeof(unsigned int), rasterSize, 0, NULL, NULL);
+
+
+    error = clEnqueueWriteBuffer(cq, cl_srcmem, CL_FALSE, 0, memworksize, heatMap, 0, NULL, NULL);
     if (error != CL_SUCCESS)
     {
         fprintf(stderr,"Couldn't transfer source to target mem!\n");
         goto out;
     }
-    error = clEnqueueWriteBuffer(cq, cl_srcmem2, CL_FALSE, 0, sizeof(unsigned int), startpointX, 0, NULL, NULL);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't transfer source to target mem!\n");
-        goto out;
-    }
-    error = clEnqueueWriteBuffer(cq, cl_srcmem3, CL_FALSE, 0, sizeof(unsigned int), startPointY, 0, NULL, NULL);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't transfer source to target mem!\n");
-        goto out;
-    }
-    error = clEnqueueWriteBuffer(cq, cl_srcmem4, CL_FALSE, 0, sizeof(float), &waermeleitfaehigkeit, 0, NULL, NULL);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't transfer source to target mem!\n");
-        goto out;
-    }
-    error = clEnqueueWriteBuffer(cq, cl_srcmem5, CL_FALSE, 0, memworksize, heatMap, 0, NULL, NULL);
-    if (error != CL_SUCCESS)
-    {
-        fprintf(stderr,"Couldn't transfer source to target mem!\n");
-        goto out;
-    }
-    /* Start the "calculation"*/
-    error = clEnqueueNDRangeKernel(cq, k_example, 2, NULL, &worksteps, NULL, 0, NULL, NULL);
+
+    error = clEnqueueNDRangeKernel(cq, k_calc, 2, NULL, worksteps, NULL, 0, NULL, NULL);
     if (error != CL_SUCCESS)
     {
         fprintf(stderr,"Couldn't enqueue the kernel!\n");
         goto out;
     }
 
-    /* Read the result back into dest */
     error = clEnqueueReadBuffer(cq, cl_destmem, CL_FALSE, 0, memworksize, newHeatMap, 0, NULL, NULL);
+    error |= clEnqueueReadBuffer(cq, cl_destmem2, CL_FALSE, 0, memworksize, diffTemperature, 0, NULL, NULL);
     if (error != CL_SUCCESS)
     {
         fprintf(stderr,"Couldn't read buffer back!\n");
         goto out;
     }
-    /* We have now submitted all commands into the queue. As this was done asynch, we have to
-     * wait for completion of all the commands */
+
     error = clFinish(cq);
     if (error != CL_SUCCESS)
     {
@@ -397,38 +294,106 @@ float calcNextHeatMap(unsigned int startpointX,
     }
     error = CL_SUCCESS;
 
-    for(int x = 0; x < rasterSize; x++){
-        for (int y = 0; y < rasterSize; y++) {
-            printf("%f\n", newHeatMap[x][y]);
-        }
+    out:
+    if (cl_srcmem) clReleaseMemObject(cl_srcmem);
+    if (cl_destmem) clReleaseMemObject(cl_destmem);
+    if (cl_destmem2) clReleaseMemObject(cl_destmem2);
+    if (error != CL_SUCCESS){
+        fprintf(stderr,"Error number %d\n", error);
+        return 0;
+    }
+}
 
+float max_diffTemperature(unsigned int arraySize,
+                            float *diffTemperature,
+                            cl_program prog,
+                            cl_context context,
+                            cl_command_queue cq){
+
+
+    //TODO Implements in OpenCl
+    unsigned int reduction_array_size = 20;
+
+    float* max = (float*) malloc(reduction_array_size * sizeof(float));
+
+    size_t worksteps = reduction_array_size;
+    size_t memworksize =  arraySize * sizeof(float);
+    size_t memOutputSze = reduction_array_size * sizeof(float);
+
+    cl_int error;
+    cl_mem cl_srcmem, cl_destmem;
+
+    cl_kernel k_max = clCreateKernel(prog, "findMaxValue", &error);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't create kernel!\n");
+        goto out;
     }
 
-    //Calc max diff Temeperatur -->  TODO in kernel mit auslagern
-    for (int x = 0; x < rasterSize ; x++) {
-        for (int y = 0; y < rasterSize; y++) {
-            if(newHeatMap[x][y] - heatMap[x][y] > maxDiffTemperatur){
-                maxDiffTemperatur = newHeatMap[x][y] - heatMap[x][y];
-            }
+    cl_srcmem = clCreateBuffer(context, CL_MEM_READ_ONLY, memworksize, NULL, &error);
+    cl_destmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, memworksize, NULL, &error);
+    if (!cl_srcmem || !cl_destmem)
+    {
+        fprintf(stderr,"Couldn't create buffer!\n");
+        goto out;
+    }
+
+    error = clSetKernelArg(k_max, 0, sizeof(cl_srcmem), &cl_srcmem);
+    error |= clSetKernelArg(k_max, 1, sizeof(cl_destmem), &cl_destmem);
+    error |= clSetKernelArg(k_max, 2, sizeof(int), (void *)&arraySize);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Failed to set kernel arguments!\n");
+        goto out;
+    }
+
+
+    error = clEnqueueWriteBuffer(cq, cl_srcmem, CL_FALSE, 0, memworksize, diffTemperature, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't transfer source to target mem!\n");
+        goto out;
+    }
+
+    error = clEnqueueNDRangeKernel(cq, k_max, 1, NULL, &worksteps, NULL, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't enqueue the kernel!\n");
+        goto out;
+    }
+
+    error = clEnqueueReadBuffer(cq, cl_destmem, CL_FALSE, 0, memOutputSze, max, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't read buffer back!\n");
+        goto out;
+    }
+
+    error = clFinish(cq);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Unable to finish calculation!\n");
+        goto out;
+    }
+    error = CL_SUCCESS;
+
+    float maxDiffTemperature = 0.0;
+    for(int i = 0; i < reduction_array_size; i++){
+        if(max[i] > maxDiffTemperature){
+            maxDiffTemperature = max[i];
         }
     }
 
     out:
-    if (error != CL_SUCCESS)
-        fprintf(stderr,"Error number %d\n", error);
-
-    /**** Phase 4: Clean up  *****/
-    if (cl_srcmem1) clReleaseMemObject(cl_srcmem1);
-    if (cl_srcmem2) clReleaseMemObject(cl_srcmem2);
-    if (cl_srcmem3) clReleaseMemObject(cl_srcmem4);
-    if (cl_srcmem4) clReleaseMemObject(cl_srcmem4);
-    if (cl_srcmem5) clReleaseMemObject(cl_srcmem5);
+    if (cl_srcmem) clReleaseMemObject(cl_srcmem);
     if (cl_destmem) clReleaseMemObject(cl_destmem);
-    if (context) clReleaseContext(context);
+    if (error != CL_SUCCESS){
+        fprintf(stderr,"Error number %d\n", error);
+        return 0;
+    }
 
-    free(k_src);
+    return maxDiffTemperature;
 
-    return maxDiffTemperatur;
 }
 /* ############################################################################## */
 
@@ -474,24 +439,19 @@ void outputSteps(int steps){
  * @param rasterSize
  * @param raster
  */
-void outputHeatMap(int rasterSize, float **raster){
-    for (int y = 0; y < rasterSize ; y++) {
-        for (int x = 0; x < rasterSize ;x++) {
-            printf("%f\t", raster[x][y]);
+void outputHeatMap(int rasterSize, float *raster){
+    for(int i = 0; i < rasterSize * rasterSize; i++){
+        printf("%f\t", raster[i]);
 
-            if(x == rasterSize -1){ //Zeilenumbruch
-                printf("\n");
-            }
+        if((i + 1) % rasterSize == 0 ){ //Zeilenumbruch
+            printf("\n");
         }
     }
-
 }
 
-void outputHeadMapGui(int rasterSize, float **raster){
-    for (int y = 0; y < rasterSize ; y++) {
-        for (int x = 0; x < rasterSize ;x++) {
-            printf("%f,", raster[x][y]);
-        }
+void outputHeadMapGui(int arraySize, float *raster){
+    for (int i = 0; i < arraySize ; i++) {
+            printf("%f,", raster[i]);
     }
     printf("#,");
     fflush(stdout);
@@ -525,10 +485,10 @@ int exec_head_conduction(float startTemperature,
     float diffTemperature;
 
     //Alocate Array
-    float** heatMap = malloc(sizeof(float*) * rasterSize);
-    for(int i = 0; i < rasterSize; i++){
-        heatMap[i] = malloc(rasterSize * sizeof(float));
-    }
+    unsigned int size_Array = rasterSize * rasterSize;
+    unsigned int mem_size_Array = sizeof(float) * size_Array;
+    float* heatMap = (float*) malloc(mem_size_Array);
+    float* diffTemperatureResults = (float*) malloc(mem_size_Array);
 
     //Check Parameter
     if (valideWaermeLeitfaehigkeit(waermeleitfaehigkeit) != 1){
@@ -547,30 +507,123 @@ int exec_head_conduction(float startTemperature,
         outputHeatMap(rasterSize, heatMap);
     }
 
-    //Verarbeitung
-    do{
-        //Alocate new Array
-        float** newHeatMap = malloc(sizeof(float*) * rasterSize);
-        for(int i = 0; i < rasterSize; i++){
-            newHeatMap[i] = malloc(rasterSize * sizeof(float));
-        }
+    //--------------------------------------------
+    // INIT OPEN CL
+    //--------------------------------------------
+    cl_int error;
+    cl_platform_id platform;
+    cl_device_id device;
+    cl_uint platforms, devices;
 
-        diffTemperature = calcNextHeatMap(startPointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap);
+    char name[128];
+    char *k_src = NULL; /* kernel source */
+    cl_context context = NULL;
+
+    error = clGetPlatformIDs(1, &platform, &platforms);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't get platform ids\n");
+        goto out;
+    }
+
+    error = clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(name), name, NULL);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't get platform name\n");
+        goto out;
+    }
+
+    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, &devices);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't get device ids\n");
+        goto out;
+    }
+
+    cl_context_properties properties[]=
+            {
+                    CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+                    0
+            };
+    context = clCreateContext(properties, 1, &device, NULL, NULL, &error);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't create the context\n");
+        goto out;
+    }
+
+    cl_command_queue cq = clCreateCommandQueue(context, device, 0, &error);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't create the command queue\n");
+        goto out;
+    }
+
+    if (!(k_src = read_file_contents("kernel.cl")))
+    {
+        fprintf(stderr,"Couldn't read the contents of the kernel file!\n");
+        goto out;
+    }
+
+    const char *srcptr[]={k_src};
+    cl_program prog = clCreateProgramWithSource(context, 1, srcptr, NULL, &error);
+    if (error != CL_SUCCESS)
+    {
+        fprintf(stderr,"Couldn't create the kernel from source\n");
+        goto out;
+    }
+
+    error = clBuildProgram(prog, 0, NULL, "", NULL, NULL);
+    if (error != CL_SUCCESS )
+    {
+        char build_c[4096];
+
+        fprintf(stderr, "Error on buildProgram\n");
+        fprintf(stderr, "\nRequestingInfo\n");
+        clGetProgramBuildInfo( prog, device, CL_PROGRAM_BUILD_LOG, sizeof(build_c), build_c, NULL );
+        fprintf(stderr, "Build Log for %s_program:\n%s\n", "kernel", build_c );
+        goto out;
+    }
+
+    //--------------------------------------------
+    //Verarbeitung
+    //--------------------------------------------
+    do{
         steps = steps + 1;
 
-        //Copy Heat Map
-        setNewRaster(rasterSize,heatMap,newHeatMap);
-        free(newHeatMap);
+        //Alocate new Array
+        float* newHeatMap = (float*) malloc(mem_size_Array);
 
+        //Calc next HeatMap
+        calcNextHeatMap(startPointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap,diffTemperatureResults,
+                                            prog, context, cq);
+        //Get Diif Temperature
+        diffTemperature = max_diffTemperature(size_Array, diffTemperatureResults, prog, context, cq);
+        //Copy Heat Map
+        setNewRaster(size_Array,heatMap,newHeatMap, prog, context, cq);
+
+        free(newHeatMap);
         if(modus == 1){
             outputSteps(steps);
             outputHeatMap(rasterSize, heatMap);
         }else if(modus == 2){
-            outputHeadMapGui(rasterSize, heatMap);
+            outputHeadMapGui(size_Array, heatMap);
         }
     }while(diffEndTemperatur < diffTemperature);
 
+    //--------------------------------------------
+    //Clean UP and RETURN
+    //--------------------------------------------
+    out:
+    if (context) clReleaseContext(context);
+    free(k_src);
     free(heatMap);
+
+    if (error != CL_SUCCESS){
+        fprintf(stderr,"Error number %d\n", error);
+        return EXIT_FAILURE;
+    }
+
     return steps;
 }
 
