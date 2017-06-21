@@ -45,15 +45,34 @@ void setUpRaster(float startTemperature,
                     unsigned int startPointX,
                     unsigned int startPointY,
                  float** raster){
+    int max_thread = omp_get_max_threads();
+    int steps = rasterSize;
+    int threadStep = steps / max_thread;
 
-    int i, k;
+    #pragma omp parallel
+    {
+        int i, k;
 
-    for (i = 0; i < rasterSize ; i++) {
-        for (k = 0; k < rasterSize ; k++) {
-            raster[i][k] = cornerTemperature;
+        int current_thread = omp_get_thread_num();
+        int startStep = 0;
+        int stopStep = 0;
+
+        startStep = (threadStep * current_thread);
+
+        if (omp_get_thread_num() + 1 == max_thread) {
+            stopStep = steps;
+        } else {
+            stopStep = threadStep * (current_thread + 1);
+        }
+        for (i = startStep; i < stopStep; i++) {
+            for (k = 0; k < rasterSize; k++) {
+                raster[i][k] = cornerTemperature;
+            }
         }
     }
+
     raster[startPointX][startPointY] = startTemperature;
+
 }
 
 /**
