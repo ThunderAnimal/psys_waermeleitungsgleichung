@@ -238,8 +238,10 @@ int exec_head_conduction(float startTemperature,
 
     //Alocate Array
     float** heatMap = malloc(sizeof(float*) * rasterSize);
+    float** newHeatMap = malloc(sizeof(float*) * rasterSize);
     for(int i = 0; i < rasterSize; i++){
         heatMap[i] = malloc(rasterSize * sizeof(float));
+         newHeatMap[i] = malloc(rasterSize * sizeof(float));
     }
 
     //Check Parameter
@@ -261,18 +263,11 @@ int exec_head_conduction(float startTemperature,
 
     //Verarbeitung
     do{
-        //Alocate new Array
-        float** newHeatMap = malloc(sizeof(float*) * rasterSize);
-        for(int i = 0; i < rasterSize; i++){
-            newHeatMap[i] = malloc(rasterSize * sizeof(float));
-        }
-
         diffTemperature = calcNextHeatMap(startPointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap);
         steps = steps + 1;
 
         //Copy Heat Map
         setNewRaster(rasterSize,heatMap,newHeatMap);
-        free(newHeatMap);
 
         if(modus == 1){
             outputSteps(steps);
@@ -283,6 +278,7 @@ int exec_head_conduction(float startTemperature,
     }while(diffEndTemperatur < diffTemperature);
 
     free(heatMap);
+    free(newHeatMap);
     return steps;
 }
 

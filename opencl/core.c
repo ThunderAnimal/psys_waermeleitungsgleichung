@@ -488,6 +488,7 @@ int exec_head_conduction(float startTemperature,
     unsigned int size_Array = rasterSize * rasterSize;
     unsigned int mem_size_Array = sizeof(float) * size_Array;
     float* heatMap = (float*) malloc(mem_size_Array);
+    float* newHeatMap = (float*) malloc(mem_size_Array);
     float* diffTemperatureResults = (float*) malloc(mem_size_Array);
 
     //Check Parameter
@@ -591,9 +592,6 @@ int exec_head_conduction(float startTemperature,
     do{
         steps = steps + 1;
 
-        //Alocate new Array
-        float* newHeatMap = (float*) malloc(mem_size_Array);
-
         //Calc next HeatMap
         calcNextHeatMap(startPointX, startPointY, rasterSize, waermeleitfaehigkeit, heatMap, newHeatMap,diffTemperatureResults,
                                             prog, context, cq);
@@ -602,7 +600,6 @@ int exec_head_conduction(float startTemperature,
         //Copy Heat Map
         setNewRaster(size_Array,heatMap,newHeatMap, prog, context, cq);
 
-        free(newHeatMap);
         if(modus == 1){
             outputSteps(steps);
             outputHeatMap(rasterSize, heatMap);
@@ -618,6 +615,7 @@ int exec_head_conduction(float startTemperature,
     if (context) clReleaseContext(context);
     free(k_src);
     free(heatMap);
+    free(newHeatMap);
 
     if (error != CL_SUCCESS){
         fprintf(stderr,"Error number %d\n", error);
