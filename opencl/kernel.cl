@@ -36,20 +36,6 @@ __kernel void calc(__global float *src, __global float *dest, __global float *de
     }
 }
 
-__kernel void findMaxValue(__global float * myArray, __global float * max, unsigned int arraysize){
-    int gid = get_global_id(0);
-    float mymax = 0;
-
-    //find minimum for the kernel
-    for (int i = gid ; i < arraysize; i+= get_global_size(0)){
-        if (*(myArray + i) > mymax){
-            mymax = *(myArray + i);
-        }
-    }
-
-    *(max + gid) = mymax;
-}
-
 __kernel void copyArray(__global float* src, __global float* dest){
     int i = get_global_id(0);
     dest[i] = src[i];
