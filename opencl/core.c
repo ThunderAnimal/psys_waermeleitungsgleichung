@@ -10,7 +10,7 @@
 #ifdef __APPLE__
     #include "OpenCL/opencl.h"
 #else
-    #include "CL/cl.h"
+    #include <CL/cl.h>
 #endif
 
 #include "core.h"
@@ -33,7 +33,7 @@ static char *read_file_contents(const char *filename)
     char *contents = NULL;
     FILE *fh;
 
-    if (!(fh = fopen(filename,"r")))
+    if (!(fh = fopen(filename,"rb")))
         return NULL;
 
     fseek(fh,0,SEEK_END);
@@ -405,7 +405,7 @@ int exec_head_conduction(float startTemperature,
         goto out;
     }
 
-    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, &devices);
+    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, &devices);
     if (error != CL_SUCCESS)
     {
         fprintf(stderr,"Couldn't get device ids\n");
