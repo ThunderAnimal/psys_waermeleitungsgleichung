@@ -16,13 +16,17 @@ TARGET=heat_conduction
 
 # Flags and stuff, change as required
 OPTIMIZE=-O3
-CPPFLAGS=-ggdb $(OPTIMIZE) -Wall
-CFLAGS=-Wmissing-prototypes
+#INCLUDE FOR WINDWOS
+INC=-I "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\include"
+CPPFLAGS=-ggdb $(OPTIMIZE) -Wall $(INC)
+CFLAGS=-Wmissing-prototypes 
 LDFLAGS=
 #FOR MAC
-LDLIBS=-framework OpenCL
-#OTHER
+#LDLIBS=-framework OpenCL
+#FOR LINUX
 #LDLIBS=-lOpenCL
+#OTHER
+LDLIBS=-L "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\lib\Win32" -lOpenCL
 CC=gcc
 CPP=g++
 
