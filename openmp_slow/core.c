@@ -55,8 +55,9 @@ void setUpRaster(float startTemperature,
             	raster[i][k] = cornerTemperature;
         	}
     	}
-    	raster[startPointX][startPointY] = startTemperature;
+    	
     }
+    raster[startPointX][startPointY] = startTemperature;
 }
 
 /**
