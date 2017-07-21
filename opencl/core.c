@@ -1,7 +1,8 @@
 /**
- * Implements the core of the algorithm.
- *
  * @file core.c
+ * @brief Implements the core of the algorithm.
+ *
+ * Contains the hole logic to calc the heatmaps
  */
 #include <stdio.h>
 #include <string.h>
@@ -93,7 +94,7 @@ unsigned int reziseRasterForCenter(unsigned int rasterSize){
  *
  * @param startTemperature
  * @param cornerTemperature
- * @param sizeArray
+ * @param rasterSize
  * @param startPointX
  * @param startPointY
  * @param raster
@@ -113,9 +114,14 @@ void setUpRaster(float startTemperature,
 
 /**
  * Set up the new Heat Map
- * @param arraySize
  * @param heatMap
  * @param newHeatMap
+ * @param worksteps
+ * @param memworksize
+ * @param cq
+ * @param cl_bufferSrc
+ * @param cl_bufferDest
+ * @param k_copy
  */
 void setNewRaster(float *heatMap,
                   float *newHeatMap,
@@ -180,10 +186,17 @@ int valideWaermeLeitfaehigkeit(float waermeleitfaehigkeit){
 
 /**
  * Calc Next Step of Heat Map
- * @param startTemperatur
- * @param rasterSize
  * @param heatMap
  * @param newHeatMap
+ * @param diffTemperature
+ * @param calcSteps
+ * @param worksteps
+ * @param memworksize
+ * @param cq
+ * @param cl_bufferHeatMap1
+ * @param cl_bufferHeatMap2
+ * @param cl_bufferDiffTemperature
+ * @param k_calc
  * @return max diff Temperatur
  */
 float calcNextHeatMap(float *heatMap,
@@ -244,6 +257,12 @@ float calcNextHeatMap(float *heatMap,
     }
 }
 
+/**
+ * Returns max Diff Temperature
+ * @param arraySize
+ * @param diffTemperature
+ * @return max diff Temperatur
+ */
 float max_diffTemperature(unsigned int arraySize,
                             float *diffTemperature){
 
@@ -310,6 +329,11 @@ void outputHeatMap(int rasterSize, float *raster){
     }
 }
 
+/**
+ * Output Heat Map for GUI
+ * @param arraySize
+ * @param raster
+ */
 void outputHeadMapGui(int arraySize, float *raster){
     for (int i = 0; i < arraySize ; i++) {
             printf("%f,", raster[i]);
@@ -331,6 +355,7 @@ void outputHeadMapGui(int arraySize, float *raster){
  * @param startPointX
  * @param startPointY
  * @param waermeleitfaehigkeit
+ * @param modus
  * @return count Steps
  */
 int exec_head_conduction(float startTemperature,
@@ -552,10 +577,10 @@ int exec_head_conduction(float startTemperature,
  *  - start Temperature is 100
  *  - corner Temperatur is 0
  *
- * @param startTemperature
  * @param diffEndTemperatur
  * @param rasterSize
  * @param waermeleitfaehigkeit
+ * @param modus
  * @return count Steps
 */
 int head_conduction_simple(float diffEndTemperatur,

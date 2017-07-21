@@ -1,7 +1,8 @@
 /**
- * Implements the core of the algorithm.
- *
  * @file core.c
+ * @brief Implements the core of the algorithm.
+ *
+ * Contains the hole logic to calc the heatmaps
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,8 +97,10 @@ int valideWaermeLeitfaehigkeit(float waermeleitfaehigkeit){
 
 /**
  * Calc Next Step of Heat Map
- * @param startTemperatur
+ * @param startpointX
+ * @param startPointY
  * @param rasterSize
+ * @param waermeleitfaehigkeit
  * @param heatMap
  * @param newHeatMap
  * @return max diff Temperatur
@@ -198,6 +201,11 @@ void outputHeatMap(int rasterSize, float **raster){
 
 }
 
+/**
+ * Output Heat Map for GUI
+ * @param rasterSize
+ * @param raster
+ */
 void outputHeadMapGui(int rasterSize, float **raster){
     for (int y = 0; y < rasterSize ; y++) {
         for (int x = 0; x < rasterSize ;x++) {
@@ -221,6 +229,7 @@ void outputHeadMapGui(int rasterSize, float **raster){
  * @param startPointX
  * @param startPointY
  * @param waermeleitfaehigkeit
+ * @param modus
  * @return count Steps
  */
 int exec_head_conduction(float startTemperature,
@@ -287,10 +296,10 @@ int exec_head_conduction(float startTemperature,
  *  - start Temperature is 100
  *  - corner Temperatur is 0
  *
- * @param startTemperature
  * @param diffEndTemperatur
  * @param rasterSize
  * @param waermeleitfaehigkeit
+ * @param modus
  * @return count Steps
 */
 int head_conduction_simple(float diffEndTemperatur,

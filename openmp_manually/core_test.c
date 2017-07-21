@@ -1,7 +1,10 @@
 /**
- * Test for functions in core.c
- *
- * We don't need to test anything here really.
+ * @file core_test.c
+ * @brief Test the core of the algorithm.
+ * 
+ * Test the core.c file
+ * will execuete on each build
+ * 
  */
 #include <assert.h>
 

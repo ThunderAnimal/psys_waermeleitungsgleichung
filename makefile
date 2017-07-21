@@ -3,6 +3,7 @@ PROJECTS= \
 	openmp_fast \
 	openmp_manually \
 	openmp_slow \
+	opencl \
 
 .PHONY: all
 all:

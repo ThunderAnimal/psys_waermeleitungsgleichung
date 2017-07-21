@@ -1,3 +1,14 @@
+/**
+ * @file heat_conduction.c
+ * @brief entryPoint to start the algorithm over CLI
+ * 
+ * In this file the alorithm will be start over CLI
+ * 2 Type to add Parameters 
+ * -3-4 Parameters: head_conduction_simple
+ * -7-8 Parameters: exec_head_conduction
+ * der letzte Parmeter ist jeweils der Modus und Optional
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 

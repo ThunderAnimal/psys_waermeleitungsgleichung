@@ -1,8 +1,41 @@
+/**
+ * @file heat_conduction.c
+ * @brief entryPoint to start the algorithm over CLI
+ * 
+ * In this file the alorithm will be start over CLI
+ * 2 Type to add Parameters 
+ * -3-4 Parameters: head_conduction_simple
+ * -7-8 Parameters: exec_head_conduction
+ * der letzte Parmeter ist jeweils der Modus und Optional
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "core.h"
 
+/**
+ * Main
+ * @param argc
+ * @param argv
+ * @return steps
+ * 
+ * Params (3-4):
+ * - diffEndTemperatur [float]
+ * - rasterSize [usigned int]
+ * - waermeleitfaehigkeit [float]
+ * - modus [int] (optional) (0 - nothing, 1 - debug in console. 2 - GUI)
+ *
+ * Params (7-8):
+ * - diffEndTemperatur [float]
+ * - rasterSize [usigned int]
+ * - waermeleitfaehigkeit [float]
+ * - startTemperature [float]
+ * - cornerTemeprature [float]
+ * - startPointX [usigned int]
+ * - startPointY [usigned int]
+ * - modus [int] (optional) (0 - nothing, 1 - debug in console. 2 - GUI)
+ */
 int main(int argc, char **argv)
 {
     float diffEndTemperature;

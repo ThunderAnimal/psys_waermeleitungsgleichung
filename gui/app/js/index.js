@@ -2,11 +2,14 @@
  * Created by insanemac on 24/05/2017.
  */
 
-//Queue
-let queueHeatMap = {}
+//global Queue Object to handle showing HeatMaps
+let queueHeatMap = {};
 
+/**
+ * Docuement Ready
+ */
 $( document ).ready(function() {
-    //Set UP Range UI
+    //Set UP Range UI Sliders
     let rangeDiffTemperature = document.getElementById('rangeDiffTemperature');
     let inputDiffTemperature = document.getElementById('inputDifftemerature');
     noUiSlider.create(rangeDiffTemperature,
@@ -84,15 +87,17 @@ $( document ).ready(function() {
     });
 
 
-    // Handler for .ready() called.
+    // On Start Click
     $("#btnStart").click(function () {
         startCalculation();
     });
 
+    //On RestStart Click
     $("#btnRestart").click(function () {
        resetCalculation();
     });
 
+    //Click on HeatMap Element
     $("body").on('click', '.heatMap_small .heatMapContainer', function () {
         const container = $(this);
         $(".heatMap_small .heatMapContainer").each(function(){
@@ -109,12 +114,25 @@ $( document ).ready(function() {
 
 });
 
+/**
+ * HeatPoint Class
+ * @param PointX
+ * @param PointY
+ * @param temperature
+ * @constructor
+ */
 function HeatPoint(PointX, PointY, temperature){
     this.PointX = PointX;
     this.PointY = PointY;
     this.temperature = temperature;
 }
 
+/**
+ * QueueHeatMap Class
+ * @constructor
+ *
+ * Purpose: Handle queue to draw HeartMaps
+ */
 function QueueHeatMap() {
     const that = this;
 
@@ -122,6 +140,13 @@ function QueueHeatMap() {
     let isRunnunig = false;
     let isFinish = false;
 
+    //Zeitintervall zur Abarbeitung der Heatmap
+    let timeIntervalExecQueue = 1000;
+
+    /**
+     * Add new Heatmap to Queue
+     * @param heatMap
+     */
     this.addHeatMap = function (heatMap) {
         const heatMapPoints = [];
         const rasterSize = Math.sqrt(heatMap.length);
@@ -136,22 +161,36 @@ function QueueHeatMap() {
         queue.push(heatMapPoints);
     };
 
+    /**
+     * Start Calculation to get Heatmaps
+     * --> startet Abarbeitung der Queue
+     */
     this.startCalculation = function(){
         isFinish = false;
         isRunnunig = true;
         execQueue();
     };
+
+    /**
+     * Information that the Calalucaltion for new Heatmaps finished
+     */
     this.setEndCalculation = function(){
         isFinish = true;
     };
+
+    /**
+     * Force Finishing exec Queue
+     */
     this.finishQueue = function () {
         isRunnunig = false;
     };
 
-
-
+    /**
+     * Abarbeitung der Queue der Heatmaps
+     */
     const execQueue = function () {
 
+        //Rekursive Function zur Abarbeitung
         const helperExecQueue = function (item_pos) {
             //Wenn durch neue Verarbeitung abgebrochen
             if(!isRunnunig){
@@ -165,7 +204,6 @@ function QueueHeatMap() {
                 return;
             }
 
-
             //Wenn ungültiges Element dann warten und erneut probieren
             if(!queue[item_pos]){
                 setTimeout(function(){
@@ -177,10 +215,9 @@ function QueueHeatMap() {
             //HEAT Map Zeichnen
             drawHeatMap(queue[item_pos], item_pos);
 
-
             //Alle  Sekunde nur die neue Heatmap anzeigen
             setTimeout(function(){
-                //Prüfen ob Liste über 20 Heatmaps groß ist dann schritt weiter erhöhen fürs Zeichnen
+                //Prüfen ob Liste über 20 Heatmaps groß ist dann schrittweite erhöhen fürs Zeichnen
                 if(queue.length > 20){
                     const schrittweite = parseInt(queue.length / 20, 10);
                     if(item_pos + schrittweite < queue.length){
@@ -192,7 +229,7 @@ function QueueHeatMap() {
                 }else{
                     helperExecQueue(item_pos + 1);
                 }
-            }, 1000);
+            }, timeIntervalExecQueue);
 
         };
 
@@ -200,6 +237,11 @@ function QueueHeatMap() {
     };
 }
 
+/**
+ * Heat Map Raster erstellen
+ * @param rasterSize
+ * @param container
+ */
 function setUpHeatMap(rasterSize, container){
     const size = 100 / rasterSize + "%";
 
@@ -212,10 +254,16 @@ function setUpHeatMap(rasterSize, container){
     }
 }
 
+/**
+ * HeatMap zeichnen
+ * @param heatMap
+ * @param item_pos
+ */
 function drawHeatMap(heatMap, item_pos){
     $("#currentStep").text(item_pos + 1);
 
     //Cala Color from value [1,0]
+    //Grundlage ist die HSL Farbscale
     function heatMapColorforValue(value){
         const h = (1.0 - value) * 240;
         return "hsl(" + h + ", 100%, 50%)";
@@ -231,10 +279,17 @@ function drawHeatMap(heatMap, item_pos){
     }
 }
 
+/**
+ * start Calculation
+ */
 function startCalculation(){
     //init new Queue
     queueHeatMap = new QueueHeatMap();
 
+    /**
+     * get Parameters to start cli programm
+     * @returns {*}
+     */
     const func_getParameters = function () {
         const startTemperature = 100;
         const cornerTemperature = 0;
@@ -259,11 +314,19 @@ function startCalculation(){
         return [diffEndTemperatre, rasterSize, waermeleitfaehigkeit, startTemperature, cornerTemperature, startPointX, startPointY, modus];
     };
 
+    /**
+     * get Path to exe File
+     * @returns {string}
+     */
     const func_getExecPath = function(){
         const val = $('input[name="group1"]:checked').val();
         return '../' + val + '/heat_conduction';
     };
 
+    /**
+     * Set Up UI on Start
+     * @param rasterSize
+     */
     const func_setUpUIStart = function(rasterSize){
         //SetUp UI
         Materialize.toast('Starte Verabeitung', 1500);
@@ -277,9 +340,16 @@ function startCalculation(){
 
     };
 
+    /**
+     * Exec Calculation programm
+     * @param execPath
+     * @param startUpParameters
+     */
     const func_execCalculation = function(execPath ,startUpParameters){
         const startTime = Date.now();
         const spawn = require('child_process').spawn;
+
+        //exec
         const exec = spawn(execPath, startUpParameters);
 
 
@@ -290,10 +360,12 @@ function startCalculation(){
 
         queueHeatMap.startCalculation();
 
+        //Get Systems Output from programm
         exec.stdout.on('data', (data) => {
+            //Aus Systems Output Heatmapdata ermitteln
             const array = data.toString().split(',');
             for(let i = 0; i < array.length; i++){
-                if(isEnd){ //Am End edie Anzahl der Steps speichern
+                if(isEnd){ //Am Ende die Anzahl der Steps speichern
                     steps = array[i];
                     return;
                 }
@@ -321,11 +393,13 @@ function startCalculation(){
             }
         });
 
+        //On Error Log
         exec.stderr.on('data', (data) => {
             console.log(`stderr: ${data}`);
 
         });
 
+        //Catch when the calc program finished
         exec.on('close', (code) => {
             const endTime = Date.now();
             console.log(`child process exited with code ${code}`);
@@ -334,6 +408,11 @@ function startCalculation(){
         });
     };
 
+    /**
+     * Setup UI when calculation finished
+     * @param steps
+     * @param time
+     */
     const func_setUpUIEnd = function(steps, time){
         $("#time").text(time/1000);
         $("#countSteps").text(steps);
@@ -341,6 +420,8 @@ function startCalculation(){
         $("#btnRestart").removeClass("disabled");
     };
 
+
+    //Start der Verarbeitung
     const inputParameters = func_getParameters();
     if(!inputParameters){
         Materialize.toast('Wählen Sie einen Startpunkt aus!', 3000);
@@ -352,6 +433,9 @@ function startCalculation(){
     }, 500);
 }
 
+/**
+ * reset Calculation
+ */
 function resetCalculation() {
     queueHeatMap.finishQueue();
     $("#result").hide();
